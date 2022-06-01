@@ -1,0 +1,162 @@
+---
+title: "Project 2 Draft"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Introduction (20 points)
+
+Scientific Question: How similar, in sequence and structure, are the nucleoproteins (N) of SARS-CoV-2 and SARS-CoV-1?
+
+Background of Gene: The nucleoprotein (N) of the SARS-CoV strains are responsible for viral replication by increasing the viral RNA transcription. It also packages the virus's genome RNA into helical RNP which plays a essential role for virus assembly. The data is sourced from UniProt for multiple sequence alignment and 
+
+Scientific Hypothesis: If we were to run a multiple sequence alignment and PCA to compare the (N) gene from both SARS-CoV strains, then we would conclude that the (N) gene from both strains are very similar in structure and sequence. 
+
+Data and Analysis: For MSA, I downloaded fasta files for both (N) genes; for PCA, I read/called in the PDB files of the two (N) genes from PDB. I will then use heat maps and sequence logos to analyze how similar the two strains' (N) are. 
+
+
+## Loading in Packages (15 points)
+BiocManager: needed to be installed so that we can further install packages for MSA
+Muscle/MSA: Both are MSA packages that come with MSA functions needed for bioinfo analysis
+Biostrings: needed package needed to be loaded in to be used alongside bio3d and muscle packages
+```{r}
+## Packages needed for MSA
+
+library(BiocManager)
+library(muscle)
+library(msa)
+library(Biostrings)
+```
+
+
+bio3d: needed to be loaded in for comparative analysis of protein structures. Has functions for PCA
+```{r, error=TRUE}
+## Packages needed for PCA
+install.packages("bio3d", dependencies = TRUE)
+library(bio3d)
+```
+
+
+gplots: package that is needed to run the "heatmaps2" function
+```{r. error=TRUE}
+install.packages("gplots")
+library(gplots)
+```
+
+
+ggplot2: needed to be loaded in to create more complex data visualizations
+ggseqlogo: package loaded alongside ggplot2 so that sequence logos can be drawn on plots
+```{r, error=TRUE}
+## Packages needed for Sequence Logo
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("ggseqlogo")
+library(ggseqlogo)
+BiocManager::install("seqLogo")
+library(seqLogo)
+```
+
+
+## Performing Bioinformatics Analysis (20 points)
+5 points for a description each of the bioinformatics method that includes data types read in and how the method works: In this section, we will perform multiple sequence alignment, homology modeling and structural bioinformatics analyses, use a heat map and sequence logo to confirm the similarities between the genomes of (N). 
+
+
+[Reading in Fasta Files from Uniprot]
+I downloaded the first 4 (N) genes that showed up for SARS-CoV-2 on the database and did the same for SARS-CoV-1. The first 4 sequences are of SARS-CoV-1 and the next 4 are of SARS-CoV-1.
+```{r}
+## N_u is a AAstringset and is a global variable
+N_u <- readAAStringSet("N.fasta1.gz")
+## Remove "##" for code check
+##print(N_u)
+
+## 
+N_r <- read.fasta(file = "N.fasta1.gz")
+length(N_r)
+## Remove "##" for code check
+## print(N_r)
+
+x <- 1:length(N_r)
+```
+
+
+```{r}
+## MSA
+library(msa)
+
+## Runs a msa on the AAstringset
+N_msa <- msa(N_u)
+
+## Shows the msa with its consensus sequence at the bottom
+print(N_msa, show = "complete")
+typeof(N_msa)
+```
+
+Heat Map 
+```{r}
+library(gplots)
+Matrix4Heatmap <- function(S4sequences, seq_length) {
+# Prime the matrix
+  forheatmap <- matrix(nrow=length(x), ncol=length(x))
+  # The function creates a nested for loop
+  for (i in seq_length) {
+    for (j in seq_length){
+      # define the variables for each sequence from the sequence alignment
+      string1 <- S4sequences[i]
+      string2 <- S4sequences[j]
+    
+      # Turn the string1 variable into a character string
+      dsl = AAStringSetList(string1)
+      as.character(unlist(dsl))
+      cl = as(dsl, "CharacterList")
+      as.list(cl)
+      
+      # Turn the string2 variable into a character string
+      dsl2 = AAStringSetList(string2)
+      as.character(unlist(dsl2))
+      cl2 = as(dsl2, "CharacterList")
+      as.list(cl2)
+      
+    # Perform a pairwise sequence alignment for the two strings
+      pa <- pairwiseAlignment(pattern = c(cl2), subject = cl)
+      
+      # Assign the score from the pairwise sequence alignment to the matrix
+      forheatmap[i,j] <- score(pa)
+    }
+  }
+  return(forheatmap)
+}
+
+# Print the values in the heatmap
+seq_matrix_align <- Matrix4Heatmap(N_u, x)
+
+# Create the heatmap with a color key
+heatmap.2(seq_matrix_align)
+```
+
+
+## Plotting the Results (15 points)
+
+Sequence Logos
+```{r, error=TRUE}
+makePWM(N_msa)
+ggseqlogo(N_msa, ic.scale = FALSE) 
+```
+
+
+PDB PC Analysis
+```{r, error=TRUE}
+library(bio3d)
+library(muscle)
+## Download PDB files
+ids <- c("2JW8", "7F2E")
+raw.files <- get.pdb(ids)
+
+## Extract and align chains
+files <- pdbsplit(raw.files, ids)
+pdbs <- pdbaln(files)
+```
+
+## Analyzing the Result (15 points)
+Looking at the analysis of the MSA, the analysis was able to create a convincing consensus sequence from the 8 sequences of the (N) gene. There were hardly any "?" in the consensus sequence meaning that the sequence of the 4 (N) genes from each of the strains are very similar
+
